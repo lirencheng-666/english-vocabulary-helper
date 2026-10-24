@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英语单词默写助手</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: #f3f6fc;
+      color: #25324a;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 560px;
+      margin: 25px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px #263b6012;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 25px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #77839a;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      color: #66738b;
+      margin-bottom: 8px;
+    }
+
+    .progress {
+      height: 8px;
+      background: #e9eef7;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #5685ed;
+      transition: width 0.25s;
+    }
+
+    .label {
+      font-size: 13px;
+      color: #7c879c;
+    }
+
+    .meaning {
+      margin: 12px 0 22px;
+      font-size: 30px;
+      font-weight: bold;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #d9e1ee;
+      border-radius: 12px;
+      font-size: 17px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #5685ed;
+      box-shadow: 0 0 0 3px #5685ed20;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      min-height: 46px;
+    }
+
+    button:focus-visible {
+      outline: 3px solid #8eb2ff;
+      outline-offset: 2px;
+    }
+
+    .primary {
+      width: 100%;
+      margin-top: 12px;
+      color: white;
+      background: #4e7ee8;
+    }
+
+    .secondary {
+      color: #345da8;
+      background: #eaf0ff;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      padding: 14px;
+      background: #f5f7fb;
+      border-radius: 12px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .correct {
+      color: #16834b;
+    }
+
+    .wrong {
+      color: #c64c45;
+    }
+
+    .hint {
+      color: #68758b;
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .actions button {
+      flex: 1;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #9aa4b5;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding: 12px;
+      }
+
+      .app {
+        margin: 10px auto;
+        padding: 20px 16px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .meaning {
+        font-size: 27px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <h1>英语单词默写助手</h1>
+    <div class="subtitle">看中文 · 写英文 · 记住每个单词</div>
+
+    <div class="progress-info">
+      <span id="questionNumber">第 1 / 30 题</span>
+      <span id="score">答对 0 题</span>
+    </div>
+
+    <div class="progress">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="label">请写出下面中文对应的英文</div>
+    <div class="meaning" id="meaning">苹果</div>
+
+    <form id="answerForm">
+      <input
+        id="answerInput"
+        type="text"
+        placeholder="在这里输入英文单词"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        aria-label="输入英文单词"
+      >
+      <button class="primary" type="submit" id="checkButton">
+        检查答案
+      </button>
+    </form>
+
+    <div class="feedback hidden" id="feedback" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="secondary" id="hintButton" type="button">
+        显示答案
+      </button>
+      <button class="secondary" id="nextButton" type="button" disabled>
+        下一题
+      </button>
+    </div>
+
+    <div class="footer">每天进步一点点，坚持就是胜利</div>
+  </main>
+
+  <script>
+    const words = [
+      { en: "apple", cn: "苹果", example: "I eat an apple.", meaning: "我吃一个苹果。", tip: "联想：苹果 apple。" },
+      { en: "book", cn: "书", example: "This is my book.", meaning: "这是我的书。", tip: "book 和 look 押韵，可以一起记。" },
+      { en: "school", cn: "学校", example: "I go to school.", meaning: "我去上学。", tip: "school 中的 ch 发 /k/ 音。" },
+      { en: "teacher", cn: "老师", example: "She is a teacher.", meaning: "她是一名老师。", tip: "teach 是教，teacher 是教的人。" },
+      { en: "student", cn: "学生", example: "I am a student.", meaning: "我是一名学生。", tip: "student 表示正在学习的人。" },
+      { en: "friend", cn: "朋友", example: "He is my friend.", meaning: "他是我的朋友。", tip: "friend 中间有 ie，注意不要写成 ei。" },
+      { en: "family", cn: "家庭", example: "I love my family.", meaning: "我爱我的家庭。", tip: "family 可以联想成家里的每一位成员。" },
+      { en: "mother", cn: "妈妈", example: "My mother is kind.", meaning: "我的妈妈很和蔼。", tip: "mother 和 father 可以放在一起记。" },
+      { en: "father", cn: "爸爸", example: "My father is tall.", meaning: "我的爸爸很高。", tip: "father 的 th 是字母组合。" },
+      { en: "water", cn: "水", example: "I drink water.", meaning: "我喝水。", tip: "water 的 a 不要漏写。" },
+      { en: "happy", cn: "开心的", example: "I am happy.", meaning: "我很开心。", tip: "happy 末尾是 y，不是 i。" },
+      { en: "beautiful", cn: "美丽的", example: "The flower is beautiful.", meaning: "这朵花很美丽。", tip: "beauty 是美，beautiful 是美丽的。" },
+      { en: "schoolbag", cn: "书包", example: "My schoolbag is blue.", meaning: "我的书包是蓝色的。", tip: "school + bag = schoolbag。" },
+      { en: "orange", cn: "橙子；橙色", example: "I like oranges.", meaning: "我喜欢橙子。", tip: "orange 也可以表示橙色。" },
+      { en: "banana", cn: "香蕉", example: "This is a banana.", meaning: "这是一根香蕉。", tip: "注意 banana 有三个 a。" },
+      { en: "morning", cn: "早晨", example: "Good morning!", meaning: "早上好！", tip: "morning 的 ing 是常见结尾。" },
+      { en: "afternoon", cn: "下午", example: "Good afternoon!", meaning: "下午好！", tip: "after + noon，表示中午之后。" },
+      { en: "evening", cn: "傍晚", example: "Good evening!", meaning: "晚上好！", tip: "注意 evening 不是 e v e n i n。" },
+      { en: "watermelon", cn: "西瓜", example: "I like watermelon.", meaning: "我喜欢西瓜。", tip: "water + melon = watermelon。" },
+      { en: "computer", cn: "电脑", example: "I use a computer.", meaning: "我使用电脑。", tip: "注意中间的 puter。" },
+      { en: "window", cn: "窗户", example: "Open the window.", meaning: "打开窗户。", tip: "window 以 dow 结尾。" },
+      { en: "door", cn: "门", example: "Close the door.", meaning: "关上门。", tip: "door 有两个 o。" },
+      { en: "pencil", cn: "铅笔", example: "I have a pencil.", meaning: "我有一支铅笔。", tip: "pencil 末尾是 cil。" },
+      { en: "rabbit", cn: "兔子", example: "The rabbit is white.", meaning: "这只兔子是白色的。", tip: "rabbit 中间有两个 b。" },
+      { en: "yellow", cn: "黄色", example: "The sun is yellow.", meaning: "太阳是黄色的。", tip: "yellow 以 ow 结尾。" },
+      { en: "purple", cn: "紫色", example: "I like purple.", meaning: "我喜欢紫色。", tip: "purple 末尾是 ple。" },
+      { en: "park", cn: "公园", example: "We play in the park.", meaning: "我们在公园里玩。", tip: "park 是公园。可以联想 park 里有草地、树木和游乐设施。" },
+      { en: "garden", cn: "花园", example: "Flowers grow in the garden.", meaning: "花在花园里生长。", tip: "garden 中间是 den。" },
+      { en: "animal", cn: "动物", example: "A cat is an animal.", meaning: "猫是一种动物。", tip: "animal 里包含单词 an。" },
+      { en: "basketball", cn: "篮球", example: "We play basketball.", meaning: "我们打篮球。", tip: "basket + ball = basketball。" }
+    ];
+
+    let current = 0;
+    let correctCount = 0;
+    let answered = false;
+    let finished = false;
+    const attempted = new Set();
+
+    const meaningEl = document.getElementById("meaning");
+    const answerInput = document.getElementById("answerInput");
+    const feedbackEl = document.getElementById("feedback");
+    const nextButton = document.getElementById("nextButton");
+    const checkButton = document.getElementById("checkButton");
+    const hintButton = document.getElementById("hintButton");
+    const form = document.getElementById("answerForm");
+
+    function renderQuestion() {
+      const word = words[current];
+      meaningEl.textContent = word.cn;
+      document.getElementById("questionNumber").textContent =
+        `第 ${current + 1} / ${words.length} 题`;
+      document.getElementById("score").textContent =
+        `答对 ${correctCount} 题`;
+      document.getElementById("progressBar").style.width =
+        `${current / words.length * 100}%`;
+
+      answerInput.value = "";
+      answerInput.disabled = false;
+      feedbackEl.classList.add("hidden");
+      nextButton.disabled = true;
+      checkButton.disabled = false;
+      hintButton.disabled = false;
+      answered = false;
+      answerInput.focus();
+      checkButton.textContent = "检查答案";
+    }
+
+    function showFeedback(isCorrect, title, revealAnswer = false) {
+    const word = words[current];
+    feedbackEl.classList.remove("hidden");
+
+    // 答错时先不公布答案，让学生有机会重新尝试
+    if (!isCorrect && !revealAnswer) {
+        feedbackEl.innerHTML = `
+         <strong class="wrong">${title}</strong>
+         <div>请检查拼写，修改后再次提交。</div>
+     `;
+      return;
+    }
+
+  // 答对或者主动查看答案时，显示完整学习信息
+  feedbackEl.innerHTML = `
+    <strong class="${isCorrect ? "correct" : "wrong"}">${title}</strong>
+    <div>正确答案：<strong>${word.en}</strong></div>
+    <div>例句：${word.example}</div>
+    <div>${word.meaning}</div>
+    <div class="hint">记忆提示：${word.tip}</div>
+  `;
+}
+
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      if (answered || finished) return;
+
+      const userAnswer = answerInput.value.trim().toLowerCase();
+
+      if (!userAnswer) {
+        feedbackEl.textContent = "请先输入一个英文单词。";
+        feedbackEl.classList.remove("hidden");
+        return;
+      }
+
+    const isCorrect = userAnswer === words[current].en;
+
+    if (isCorrect) {
+    // 只有本题第一次答对时才增加分数
+    if (!attempted.has(current)) {
+     attempted.add(current);
+     correctCount++;
+    }
+
+     // 答对后锁定本题
+    answered = true;
+     answerInput.disabled = true;
+    checkButton.disabled = true;
+    hintButton.disabled = true;
+     nextButton.disabled = false;
+
+     showFeedback(true, "回答正确！");
+    } else {
+    // 答错后不锁定，允许学生修改并重新提交
+    answered = false;
+    answerInput.disabled = false;
+    checkButton.disabled = false;
+    hintButton.disabled = false;
+    nextButton.disabled = true;
+
+      showFeedback(false, "拼写不正确");
+      checkButton.textContent = "重新提交";
+    answerInput.focus();
+    }
+
+    document.getElementById("score").textContent =
+     `答对 ${correctCount} 题`;
+    });
+
+    hintButton.addEventListener("click", function() {
+      if (answered || finished) return;
+
+      answered = true;
+      answerInput.disabled = true;
+      checkButton.disabled = true;
+      hintButton.disabled = true;
+      nextButton.disabled = false;
+      showFeedback(false, "答案已显示，请认真记忆。", true);
+    });
+
+    nextButton.addEventListener("click", function() {
+      if (current < words.length - 1) {
+        current++;
+        renderQuestion();
+      } else {
+        finished = true;
+        document.getElementById("questionNumber").textContent = "练习已完成";
+        document.getElementById("progressBar").style.width = "100%";
+        meaningEl.textContent = "太棒了！";
+        answerInput.classList.add("hidden");
+        checkButton.classList.add("hidden");
+        nextButton.classList.add("hidden");
+        hintButton.classList.add("hidden");
+        feedbackEl.classList.remove("hidden");
+        feedbackEl.innerHTML = `
+          <strong>本组练习完成！</strong>
+          <div>共 ${words.length} 题，答对 ${correctCount} 题。</div>
+          <div>正确率：${words.length > 0? Math.round(correctCount / words.length * 100): 0}%</div>
+          <button class="primary" onclick="location.reload()">再练一次</button>
+        `;
+      }
+    });
+
+    renderQuestion();
+  </script>
+</body>
+</html>
